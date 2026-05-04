@@ -49,7 +49,12 @@
     },
     "success": "Skill matrix upgraded successfully",
     "protocols": "SYSTEM CORE UPGRADE PROTOCOLS",
-    "warning": "Warning: upgrading skills slightly reduces cast time and greatly increases mana output."
+    "warning": "Warning: upgrading skills slightly reduces cast time and greatly increases mana output.",
+    "confirmTitle": "Confirm Matrix Upgrade",
+    "confirmDesc": "Upgrade {{skill}} from rank {{from}} to rank {{to}}? Resources will be consumed immediately and this cannot be undone.",
+    "confirmCost": "Cost",
+    "confirmYes": "Confirm Upgrade",
+    "confirmNo": "Cancel"
   },
   "quests": {
     "dailyQuest": "Daily Quest",
