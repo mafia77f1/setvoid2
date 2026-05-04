@@ -350,6 +350,44 @@ const Abilities = () => {
         </div>
       </main>
 
+      <AlertDialog open={!!pendingUpgrade} onOpenChange={(o) => !o && setPendingUpgrade(null)}>
+        <AlertDialogContent className="bg-[#04060c] border-2 border-blue-500/40 text-white">
+          {pendingUpgrade && (() => {
+            const skill = skills.find((s) => s.id === pendingUpgrade)!;
+            const lvl = skillLevels[pendingUpgrade] || 1;
+            const sCost = STONE_COSTS[lvl];
+            const gCost = GOLD_COSTS[lvl];
+            return (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-blue-300 font-black tracking-widest uppercase text-sm">
+                    {t('abilities.confirmTitle')}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-zinc-300 text-xs leading-relaxed">
+                    {t('abilities.confirmDesc', { skill: skill.name, from: RANK_LABELS[lvl - 1], to: RANK_LABELS[lvl] })}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="bg-black/40 border border-zinc-800 rounded-lg p-3 my-2">
+                  <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest mb-2">{t('abilities.confirmCost')}</p>
+                  <div className="flex items-center justify-around">
+                    <span className="text-blue-300 font-black">💎 {sCost}</span>
+                    <span className="text-yellow-300 font-black flex items-center gap-1"><Coins size={14} /> {gCost.toLocaleString()}</span>
+                  </div>
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="bg-zinc-900 border-zinc-700 hover:bg-zinc-800 text-zinc-300">
+                    {t('abilities.confirmNo')}
+                  </AlertDialogCancel>
+                  <AlertDialogAction onClick={confirmUpgrade} className="bg-blue-600 hover:bg-blue-500 text-white font-black">
+                    {t('abilities.confirmYes')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </>
+            );
+          })()}
+        </AlertDialogContent>
+      </AlertDialog>
+
       <BottomNav />
     </div>
   );
