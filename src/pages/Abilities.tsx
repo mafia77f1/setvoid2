@@ -6,6 +6,7 @@ import { useGameState } from '@/hooks/useGameState';
 import { Zap, Swords, Target, ArrowUp, Lock, Sparkles, Hexagon, Cpu, ShieldAlert, Hourglass, Coins } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 // Mastery / Upgrade Rank tuning
 const SKILL_LEVEL_MULTIPLIERS = [1, 1.3, 1.6, 2.0, 2.5, 3.0] as const;
@@ -45,6 +46,7 @@ const Abilities = () => {
   const { t } = useTranslation();
   const { gameState, consumeItem, spendGold } = useGameState();
   const [skillLevels, setSkillLevels] = useState<SkillLevels>(loadSkillLevels);
+  const [pendingUpgrade, setPendingUpgrade] = useState<SkillId | null>(null);
 
   const strengthLevel = gameState.levels.strength || 1;
   const baseDmg = getBaseDamage(strengthLevel);
@@ -106,7 +108,7 @@ const Abilities = () => {
     },
   ];
 
-  const upgradeSkill = (skillId: SkillId) => {
+  const requestUpgrade = (skillId: SkillId) => {
     const currentLevel = skillLevels[skillId] || 1;
     if (currentLevel >= MAX_SKILL_LEVEL) {
       toast({ title: 'SYSTEM', description: t('abilities.errors.max') });
@@ -114,7 +116,6 @@ const Abilities = () => {
     }
     const stoneCost = STONE_COSTS[currentLevel];
     const goldCost = GOLD_COSTS[currentLevel];
-
     if (coreStones < stoneCost) {
       toast({ title: 'SYSTEM', description: t('abilities.errors.noStones', { count: stoneCost }), variant: 'destructive' });
       return;
@@ -123,19 +124,33 @@ const Abilities = () => {
       toast({ title: 'SYSTEM', description: t('abilities.errors.noGold', { count: goldCost }), variant: 'destructive' });
       return;
     }
+    setPendingUpgrade(skillId);
+  };
 
-    if (goldCost > 0) {
-      const ok = spendGold(goldCost);
-      if (!ok) {
-        toast({ title: 'SYSTEM', description: t('abilities.errors.noGold', { count: goldCost }), variant: 'destructive' });
-        return;
-      }
+  const confirmUpgrade = () => {
+    if (!pendingUpgrade) return;
+    const skillId = pendingUpgrade;
+    const currentLevel = skillLevels[skillId] || 1;
+    const stoneCost = STONE_COSTS[currentLevel];
+    const goldCost = GOLD_COSTS[currentLevel];
+
+    // Re-check at confirm time in case state changed
+    if (coreStones < stoneCost || gold < goldCost) {
+      toast({ title: 'SYSTEM', description: t('abilities.errors.noStones', { count: stoneCost }), variant: 'destructive' });
+      setPendingUpgrade(null);
+      return;
+    }
+    if (goldCost > 0 && !spendGold(goldCost)) {
+      toast({ title: 'SYSTEM', description: t('abilities.errors.noGold', { count: goldCost }), variant: 'destructive' });
+      setPendingUpgrade(null);
+      return;
     }
     consumeItem('enhancement_stone', stoneCost);
     const newLevels: SkillLevels = { ...skillLevels, [skillId]: currentLevel + 1 };
     setSkillLevels(newLevels);
     saveSkillLevels(newLevels);
     toast({ title: 'SYSTEM UPGRADE', description: t('abilities.success') });
+    setPendingUpgrade(null);
   };
 
   type AbilityColorTheme = { border: string; text: string; bg: string; glow: string; bar: string; btn: string };
@@ -281,7 +296,7 @@ const Abilities = () => {
 
                     {level < MAX_SKILL_LEVEL ? (
                       <button
-                        onClick={() => upgradeSkill(skill.id)}
+                        onClick={() => requestUpgrade(skill.id)}
                         disabled={!canUpgrade}
                         className={cn(
                           'flex-1 min-w-[180px] h-12 rounded-xl border-b-4 font-black text-[11px] uppercase tracking-widest transition-all active:translate-y-1 active:border-b-0 flex items-center justify-center gap-2 shadow-lg px-3',
@@ -334,6 +349,44 @@ const Abilities = () => {
           </p>
         </div>
       </main>
+
+      <AlertDialog open={!!pendingUpgrade} onOpenChange={(o) => !o && setPendingUpgrade(null)}>
+        <AlertDialogContent className="bg-[#04060c] border-2 border-blue-500/40 text-white">
+          {pendingUpgrade && (() => {
+            const skill = skills.find((s) => s.id === pendingUpgrade)!;
+            const lvl = skillLevels[pendingUpgrade] || 1;
+            const sCost = STONE_COSTS[lvl];
+            const gCost = GOLD_COSTS[lvl];
+            return (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-blue-300 font-black tracking-widest uppercase text-sm">
+                    {t('abilities.confirmTitle')}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-zinc-300 text-xs leading-relaxed">
+                    {t('abilities.confirmDesc', { skill: skill.name, from: RANK_LABELS[lvl - 1], to: RANK_LABELS[lvl] })}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="bg-black/40 border border-zinc-800 rounded-lg p-3 my-2">
+                  <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest mb-2">{t('abilities.confirmCost')}</p>
+                  <div className="flex items-center justify-around">
+                    <span className="text-blue-300 font-black">💎 {sCost}</span>
+                    <span className="text-yellow-300 font-black flex items-center gap-1"><Coins size={14} /> {gCost.toLocaleString()}</span>
+                  </div>
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="bg-zinc-900 border-zinc-700 hover:bg-zinc-800 text-zinc-300">
+                    {t('abilities.confirmNo')}
+                  </AlertDialogCancel>
+                  <AlertDialogAction onClick={confirmUpgrade} className="bg-blue-600 hover:bg-blue-500 text-white font-black">
+                    {t('abilities.confirmYes')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </>
+            );
+          })()}
+        </AlertDialogContent>
+      </AlertDialog>
 
       <BottomNav />
     </div>
