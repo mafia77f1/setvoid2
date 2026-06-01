@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameState } from '@/hooks/useGameState';
+import { useProfile } from '@/hooks/useProfile';
 import { BottomNav } from '@/components/BottomNav';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import { GateLootModal, generateGateLoot, LootItem } from '@/components/GateLootModal';
 import { AlertTriangle, Zap, Target, Clock, X, Skull, Activity, Scan, Shield, Map as MapIcon, LocateFixed, Gift } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -33,6 +35,7 @@ const useGateTimer = (closingTime?: string) => {
 
 const Gates = () => {
   const { gameState, completeGate } = useGameState();
+  const { loading: profileLoading } = useProfile();
   const { t } = useTranslation();
   const navigate = useNavigate();
   
@@ -143,6 +146,10 @@ const Gates = () => {
         </div>
       </div>
     );
+  }
+
+  if (profileLoading) {
+    return <LoadingScreen fullScreen message="GATES" />;
   }
 
   return (

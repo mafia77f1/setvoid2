@@ -1,5 +1,7 @@
 import { useGameState } from '@/hooks/useGameState';
+import { useProfile } from '@/hooks/useProfile';
 import { BottomNav } from '@/components/BottomNav';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import { useState, useEffect } from 'react';
 import { Dumbbell, Brain, Heart, Zap, Target, CheckCircle2, Clock, Scroll, X, ShieldAlert, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -11,6 +13,7 @@ type QuestTab = 'all' | StatType;
 
 const Quests = () => {
   const { gameState, startSideQuest, claimSideQuest, closeSideQuest } = useGameState();
+  const { loading: profileLoading } = useProfile();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<QuestTab>('all');
 
@@ -77,6 +80,10 @@ const Quests = () => {
     { id: 'spirit', label: 'SPR', icon: Heart },
     { id: 'agility', label: 'AGI', icon: Zap },
   ];
+
+  if (profileLoading) {
+    return <LoadingScreen fullScreen message="QUESTS" />;
+  }
 
   return (
     <div className="min-h-screen bg-[#020817] text-white p-3 font-sans pb-24">
