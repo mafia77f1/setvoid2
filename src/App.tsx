@@ -7,7 +7,7 @@ import { useGameState } from "@/hooks/useGameState";
 import { useAuth } from "@/hooks/useAuth";
 import { LevelUpModal } from "@/components/LevelUpModal";
 import { GameOverModal } from "@/components/GameOverModal";
-import { Loader2 } from "lucide-react";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 import Index from "./pages/Index";
 import Quests from "./pages/Quests";
@@ -32,13 +32,9 @@ const AppContent = () => {
   const { gameState, levelUpInfo, dismissLevelUp, resetGame } = useGameState();
   const { user, loading: authLoading } = useAuth();
 
-  // Show loading while checking auth
+  // Show loading splash while checking auth
   if (authLoading) {
-    return (
-      <div className="min-h-screen bg-[#010205] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    );
+    return <LoadingScreen fullScreen message="SETVOID" />;
   }
 
   // If not authenticated, not onboarded, or needs password setup - show onboarding
