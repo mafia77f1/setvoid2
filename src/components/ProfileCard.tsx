@@ -62,28 +62,28 @@ export const ProfileCard = ({ gameState, getXpProgress, onUpdateProfile }: Profi
         <div className="scan-line" />
 
         <div className="status-header">
-          <h2>الحالة</h2>
+          <h2>{t('profile.title')}</h2>
         </div>
 
         <div className="p-6">
           <div className="flex items-center gap-6 mb-4">
-            {/* القسم الأيسر: المعلومات بالعربي */}
+            {/* القسم الأيسر: المعلومات */}
             <div className="flex-1 flex flex-col gap-1 text-right" dir="rtl">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-primary/70 font-bold">name:</span>
+                <span className="text-[10px] text-primary/70 font-bold">{t('common.name')}:</span>
                 <span className="font-semibold text-sm">{gameState.playerName}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-primary/70 font-bold">rank:</span>
+                <span className="text-[10px] text-primary/70 font-bold">{t('common.rank')}:</span>
                 <span className={cn("font-bold text-sm", rankColor.text)}>{rankColor.rankName}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-primary/70 font-bold">Title:</span>
+                <span className="text-[10px] text-primary/70 font-bold">{t('common.title')}:</span>
                 <span className="text-sm text-primary">
                   {gameState.equippedTitle || '-'}
                 </span>
                 {gameState.equippedTitle && (
-                  <span className="text-[8px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">مجهز</span>
+                  <span className="text-[8px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">{t('common.equipped')}</span>
                 )}
               </div>
             </div>
@@ -91,7 +91,7 @@ export const ProfileCard = ({ gameState, getXpProgress, onUpdateProfile }: Profi
             {/* القسم الأيمن: اللفل */}
             <div className="text-center">
               <div className={cn("text-5xl font-bold glow-text", rankColor.text)}>{totalLevel}</div>
-              <div className="text-[10px] text-muted-foreground tracking-widest font-bold">level</div>
+              <div className="text-[10px] text-muted-foreground tracking-widest font-bold">{t('common.level')}</div>
             </div>
           </div>
 
