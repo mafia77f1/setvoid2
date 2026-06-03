@@ -955,6 +955,45 @@ export const useGameState = () => {
     return success;
   }, []);
 
+  // Merge 5 Cutting Stones → 1 Mana Stone
+  const mergeCuttingStones = useCallback((): boolean => {
+    const NEED = 5;
+    let ok = false;
+    setGameState(prev => {
+      const cs = prev.inventory.find(i => i.id === 'cutting_stones');
+      if (!cs || cs.quantity < NEED) return prev;
+      ok = true;
+      const decremented = prev.inventory.map(i =>
+        i.id === 'cutting_stones' ? { ...i, quantity: i.quantity - NEED } : i
+      );
+      const existingStone = decremented.find(i => i.id === 'mana_stone');
+      const nextInventory = existingStone
+        ? decremented.map(i => i.id === 'mana_stone' ? { ...i, quantity: i.quantity + 1 } : i)
+        : [...decremented, { id: 'mana_stone', name: 'Mana Stone', description: 'Forged stone', type: 'tool' as const, category: 'stone', effect: 0, price: 0, quantity: 1, icon: '🔮' }];
+      return { ...prev, inventory: nextInventory };
+    });
+    return ok;
+  }, []);
+
+  // Consume 1 Mana Stone (called after the user picks an action in the modal).
+  // Action handling itself (navigation, opening chat, etc.) is performed by the UI.
+  const consumeManaStone = useCallback((): boolean => {
+    let ok = false;
+    setGameState(prev => {
+      const ms = prev.inventory.find(i => i.id === 'mana_stone');
+      if (!ms || ms.quantity <= 0) return prev;
+      ok = true;
+      return {
+        ...prev,
+        inventory: prev.inventory.map(i =>
+          i.id === 'mana_stone' ? { ...i, quantity: i.quantity - 1 } : i
+        ),
+      };
+    });
+    return ok;
+  }, []);
+
+
   return {
     gameState,
     levelUpInfo,
@@ -991,5 +1030,7 @@ export const useGameState = () => {
     updatePlayerData,
     completeGate,
     resetAndReallocateXP,
+    mergeCuttingStones,
+    consumeManaStone,
   };
 };
