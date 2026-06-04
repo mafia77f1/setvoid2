@@ -17,7 +17,7 @@ export interface RankData {
 export const getRankFromLevel = (level: number): RankData => {
   if (level >= 50) return {
     name: 'A',
-    title: 'S-Rank Hunter',
+    title: 'A-Rank Hunter',
     gradient: 'from-orange-500 via-amber-400 to-yellow-500',
     glow: 'shadow-[0_0_80px_rgba(245,158,11,0.4)]',
     textColor: 'text-amber-400',
@@ -29,7 +29,7 @@ export const getRankFromLevel = (level: number): RankData => {
   };
   if (level >= 35) return {
     name: 'B',
-    title: 'A-Rank Hunter',
+    title: 'B-Rank Hunter',
     gradient: 'from-purple-500 via-violet-400 to-fuchsia-500',
     glow: 'shadow-[0_0_60px_rgba(168,85,247,0.35)]',
     textColor: 'text-purple-400',
@@ -41,7 +41,7 @@ export const getRankFromLevel = (level: number): RankData => {
   };
   if (level >= 20) return {
     name: 'C',
-    title: 'B-Rank Hunter',
+    title: 'C-Rank Hunter',
     gradient: 'from-blue-500 via-cyan-400 to-blue-600',
     glow: 'shadow-[0_0_50px_rgba(59,130,246,0.3)]',
     textColor: 'text-blue-400',
@@ -53,7 +53,7 @@ export const getRankFromLevel = (level: number): RankData => {
   };
   if (level >= 10) return {
     name: 'D',
-    title: 'C-Rank Hunter',
+    title: 'D-Rank Hunter',
     gradient: 'from-yellow-500 via-amber-400 to-orange-400',
     glow: 'shadow-[0_0_30px_rgba(234,179,8,0.2)]',
     textColor: 'text-yellow-400',
