@@ -993,6 +993,33 @@ export const useGameState = () => {
     return ok;
   }, []);
 
+  // Grant gold + items from gate/dungeon loot in one atomic update.
+  const claimGateLoot = useCallback(
+    (entries: Array<{ id: string; quantity: number; type: 'gold' | 'item' }>) => {
+      setGameState(prev => {
+        let gold = prev.gold;
+        let inv = [...prev.inventory];
+        for (const e of entries) {
+          if (e.type === 'gold') {
+            gold += e.quantity;
+            continue;
+          }
+          const existing = inv.find(i => i.id === e.id);
+          if (existing) {
+            inv = inv.map(i => i.id === e.id ? { ...i, quantity: i.quantity + e.quantity } : i);
+          } else {
+            const def = MARKET_ITEMS.find(i => i.id === e.id);
+            if (def) inv.push({ ...def, quantity: e.quantity });
+          }
+        }
+        return { ...prev, gold, inventory: inv };
+      });
+    },
+    []
+  );
+
+
+
 
   return {
     gameState,
@@ -1032,5 +1059,6 @@ export const useGameState = () => {
     resetAndReallocateXP,
     mergeCuttingStones,
     consumeManaStone,
+    claimGateLoot,
   };
 };
