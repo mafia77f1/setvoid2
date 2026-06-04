@@ -81,12 +81,12 @@ const Abilities = () => {
   return (
     <div className="min-h-screen bg-[#020408] text-white p-4 pb-32 font-sans relative overflow-hidden">
       <header className="relative z-10 flex flex-col items-center mb-10 pt-4">
-        <div className="flex items-center gap-4 mb-2">
+        <div className="flex items-center gap-4 mb-4">
           <div className="h-px w-20 bg-gradient-to-r from-transparent to-zinc-400" />
           <img src="/src/assets/SETVOIDUI.png" alt="Logo" className="h-12 w-auto" />
           <div className="h-px w-20 bg-gradient-to-l from-transparent to-zinc-400" />
         </div>
-        <h1 className="text-3xl font-black italic tracking-widest text-white uppercase">{t('abilities.title')}</h1>
+        <h1 className="text-3xl font-black italic tracking-widest text-white uppercase">ABILITIES</h1>
       </header>
 
       <main className="relative z-10 max-w-xl mx-auto space-y-8">
