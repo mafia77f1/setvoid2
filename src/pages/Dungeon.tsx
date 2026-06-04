@@ -12,6 +12,7 @@ import { DungeonSystemMessage } from '@/features/dungeon/DungeonSystemMessage';
 import { StaminaModal } from '@/features/dungeon/DungeonEncounter';
 import { generateDungeon, countRoomTypes, STAMINA_TASKS } from '@/features/dungeon/dungeonGenerator';
 import { DungeonRoom, Position, SystemMessage, StaminaTask } from '@/features/dungeon/DungeonTypes';
+import { GateLootModal, generateGateLoot, type LootItem } from '@/components/GateLootModal';
 let username: string = "ALXMUS";
 const GRID_SIZE = 8;
 
@@ -40,7 +41,7 @@ const FLOOR_MULTIPLIERS = [1, 1.5, 2, 2.8, 3.5, 5];
 const Dungeon = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { gameState, consumeItem } = useGameState();
+  const { gameState, consumeItem, claimGateLoot } = useGameState();
   const { playPathSelect, playMonsterEncounter, playTreasureFound, playDungeonEnter, playBossEncounter } = useSoundEffects();
   const rank = (searchParams.get('rank') || 'E').toUpperCase();
   const theme = RANK_THEMES[rank] || RANK_THEMES['E'];
@@ -82,6 +83,10 @@ const Dungeon = () => {
   const [typewriterDone, setTypewriterDone] = useState(false);
 
   const [totalSteps, setTotalSteps] = useState(0);
+
+  // Gate loot
+  const [gateLoot, setGateLoot] = useState<LootItem[] | null>(null);
+  const [lootClaimed, setLootClaimed] = useState(false);
 
   const hasExitStone = (gameState.inventory || []).some(i => i.id === 'gate_exit_stone' && i.quantity > 0);
 
@@ -232,6 +237,9 @@ const Dungeon = () => {
     } else {
       setCleared(true);
       setPhase('cleared');
+      // Generate gate loot once on clear
+      const loot = generateGateLoot(rank);
+      setGateLoot(loot);
     }
   };
 
@@ -516,10 +524,24 @@ const Dungeon = () => {
         {showStaminaModal && (
           <StaminaModal open={showStaminaModal} tasks={staminaTasks} onComplete={handleStaminaTask} onClose={() => setShowStaminaModal(false)} themeColor={theme.primary} />
         )}
-        {cleared && (
+        {cleared && lootClaimed && (
           <DungeonClearedScreen rank={rank} gold={gold} xp={xp} monstersDefeated={monstersDefeated} treasuresFound={treasuresFound} roomsExplored={roomsExplored} themeColor={theme.primary} onExit={() => navigate(-1)} />
         )}
       </AnimatePresence>
+
+      {/* Gate Loot Modal — shown before the cleared screen */}
+      {cleared && gateLoot && !lootClaimed && (
+        <GateLootModal
+          show
+          rank={rank}
+          loot={gateLoot}
+          onClose={() => setLootClaimed(true)}
+          onCollect={() => {
+            claimGateLoot(gateLoot.map(l => ({ id: l.id, quantity: l.quantity, type: l.type })));
+            setLootClaimed(true);
+          }}
+        />
+      )}
     </div>
   );
 };

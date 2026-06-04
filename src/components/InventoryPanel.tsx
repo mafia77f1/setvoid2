@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { X, Package, Zap, Eye, Key, FlaskConical, Crown, Star, Lock, BarChart3 } from 'lucide-react';
+import { X, Package, Zap, Eye, Key, FlaskConical, Crown, Star, Lock, BarChart3, Gem, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ItemUseModal } from './ItemUseModal';
 import { ItemAnalysisModal } from './ItemAnalysisModal';
 import { StoneUseModal } from './StoneUseModal';
+import { ManaStoneModal } from './ManaStoneModal';
 import { GameState, StatType, InventoryItem } from '@/types/game';
 
 // نظام ألوان الندرة
@@ -162,6 +163,28 @@ const SHOP_ITEMS: ShopItem[] = [
     effect: 'خروج آمن',
     price: 8000,
   },
+  {
+    id: 'cutting_stones',
+    name: 'Cutting Stones',
+    arabicName: 'أحجار القطع',
+    description: 'ادمج 5 منها في السوق لصنع حجر مانا',
+    category: 'Material',
+    rarity: 'C',
+    icon: <Gem className="w-6 h-6" />,
+    effect: '5 → حجر مانا',
+    price: 7000,
+  },
+  {
+    id: 'mana_stone',
+    name: 'Mana Stone',
+    arabicName: 'حجر المانا',
+    description: 'حجر نادر يمنحك إجراءً قوياً واحداً',
+    category: 'Stone',
+    rarity: 'B',
+    icon: <Sparkles className="w-6 h-6" />,
+    effect: 'إجراء خاص',
+    price: 0,
+  },
 ];
 
 interface InventoryPanelProps {
@@ -181,6 +204,7 @@ export const InventoryPanel = ({ inventory, gameState, onUseItem, onEquipTitle, 
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItem | null>(null);
   const [showStoneModal, setShowStoneModal] = useState(false);
   const [stoneItem, setStoneItem] = useState<InventoryItem | null>(null);
+  const [showManaStone, setShowManaStone] = useState(false);
 
   // الحصول على كمية العنصر في المخزون
   const getItemQuantity = (itemId: string): number => {
@@ -409,18 +433,23 @@ export const InventoryPanel = ({ inventory, gameState, onUseItem, onEquipTitle, 
                     <button
                       onClick={() => {
                         const invItem = inventory.find(i => i.id === selectedItem.id);
-                        if (invItem) {
-                          // Special stones get their own modal
-                          const specialStoneIds = ['rename_stone', 'gate_exit_stone', 'grand_quest_stone', 'central_activation_stone'];
-                          if (specialStoneIds.includes(selectedItem.id)) {
-                            setStoneItem(invItem);
-                            setShowStoneModal(true);
-                            setSelectedItem(null);
-                          } else {
-                            setSelectedInventoryItem(invItem);
-                            setShowUseModal(true);
-                            setSelectedItem(null);
-                          }
+                        if (!invItem) return;
+                        // Mana Stone opens its dedicated action modal
+                        if (selectedItem.id === 'mana_stone') {
+                          setShowManaStone(true);
+                          setSelectedItem(null);
+                          return;
+                        }
+                        // Special stones get their own modal
+                        const specialStoneIds = ['rename_stone', 'gate_exit_stone', 'grand_quest_stone', 'central_activation_stone'];
+                        if (specialStoneIds.includes(selectedItem.id)) {
+                          setStoneItem(invItem);
+                          setShowStoneModal(true);
+                          setSelectedItem(null);
+                        } else {
+                          setSelectedInventoryItem(invItem);
+                          setShowUseModal(true);
+                          setSelectedItem(null);
                         }
                       }}
                       className={cn(
@@ -523,6 +552,16 @@ export const InventoryPanel = ({ inventory, gameState, onUseItem, onEquipTitle, 
           }}
         />
       )}
+
+      {/* Mana Stone Action Modal */}
+      <ManaStoneModal
+        show={showManaStone}
+        onClose={() => setShowManaStone(false)}
+        onConsume={() => {
+          onConsumeItem?.('mana_stone', 1);
+          return true;
+        }}
+      />
     </div>
   );
 };
