@@ -8,6 +8,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { LevelUpModal } from "@/components/LevelUpModal";
 import { GameOverModal } from "@/components/GameOverModal";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { AppHeader } from "@/components/AppHeader";
+import { AppFooter } from "@/components/AppFooter";
 
 import Index from "./pages/Index";
 import Quests from "./pages/Quests";
@@ -45,6 +47,7 @@ const AppContent = () => {
 
   return (
     <>
+      <AppHeader />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/quests" element={<Quests />} />
@@ -63,6 +66,8 @@ const AppContent = () => {
         <Route path="/penalty" element={<Penalty />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <AppFooter />
+      
       
       {levelUpInfo && (
         <LevelUpModal
