@@ -237,7 +237,7 @@ const getDefaultState = (): GameState => ({
   grandQuest: null,
   inventory: getInitialInventory(),
   prayerQuests: getInitialPrayerQuests(),
-  shadowSoldiers: getInitialShadowSoldiers(),
+  shadowSoldiers: [],
   equipment: [],
   gates: getScheduledGates(1),
   dailyStats: [],
