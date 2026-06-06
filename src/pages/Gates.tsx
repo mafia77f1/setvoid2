@@ -85,6 +85,11 @@ const Gates = () => {
 
   const handleEnterGate = () => {
     if (!selectedGate) return;
+    // MP gate: block portal entry if Mana < 10
+    if ((gameState.energy ?? 0) < 10) {
+      try { window.dispatchEvent(new CustomEvent('mp-too-low', { detail: { current: gameState.energy, required: 10 } })); } catch {}
+      return;
+    }
     setIsEntering(true);
     setTimeout(() => {
       navigate(`/dungeon?rank=${selectedGate.rank}`);
