@@ -71,7 +71,7 @@ export const ProfileCard = ({ gameState, getXpProgress, onUpdateProfile }: Profi
             <div className="flex-1 flex flex-col gap-1 text-right" dir="rtl">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-primary/70 font-bold">{t('common.name')}:</span>
-                <span className="font-semibold text-sm">{gameState.playerName}</span>
+                <span className="font-semibold text-sm">Warrior {gameState.playerName}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-primary/70 font-bold">{t('common.rank')}:</span>

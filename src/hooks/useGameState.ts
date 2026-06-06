@@ -106,18 +106,31 @@ const getSideQuests = (): Quest[] => {
   ];
 
   const startIndex = day % sideQuests.length;
-  return [sideQuests[startIndex], sideQuests[(startIndex + 1) % sideQuests.length], sideQuests[(startIndex + 2) % sideQuests.length]];
+  const selected = [sideQuests[startIndex], sideQuests[(startIndex + 1) % sideQuests.length], sideQuests[(startIndex + 2) % sideQuests.length]];
+
+  // Enforce global caps: total side-quest gold <= 150, total XP <= 200
+  const GOLD_CAP = 150;
+  const XP_CAP = 200;
+  const totalGold = selected.reduce((s, q) => s + (q.goldReward || 0), 0);
+  const totalXp = selected.reduce((s, q) => s + (q.xpReward || 0), 0);
+  const goldScale = totalGold > GOLD_CAP ? GOLD_CAP / totalGold : 1;
+  const xpScale = totalXp > XP_CAP ? XP_CAP / totalXp : 1;
+  return selected.map(q => ({
+    ...q,
+    goldReward: Math.floor((q.goldReward || 0) * goldScale),
+    xpReward: Math.floor((q.xpReward || 0) * xpScale),
+  }));
 };
 
 const getInitialAbilities = (): Ability[] => [
-  { id: 'a1', name: 'قدرة الانضباط', description: 'تزيد تركيزك على المهام', requiredLevel: 3, category: 'mind', unlocked: false, level: 1, cooldownDays: 7, effect: 'مضاعفة XP للمهمة القادمة' },
-  { id: 'a2', name: 'قدرة التركيز', description: 'تقلل التشتت الذهني', requiredLevel: 5, category: 'mind', unlocked: false, level: 1, cooldownDays: 7, effect: 'إكمال مهمة تلقائياً' },
-  { id: 'a3', name: 'قدرة التغلب', description: 'تساعدك على هزيمة الزعماء', requiredLevel: 4, category: 'strength', unlocked: false, level: 1, cooldownDays: 7, effect: 'ضرر مضاعف للزعيم' },
-  { id: 'a4', name: 'قدرة ضبط النفس', description: 'تزيد مقاومتك للإغراءات', requiredLevel: 6, category: 'spirit', unlocked: false, level: 1, cooldownDays: 7, effect: 'حماية من خسارة HP' },
-  { id: 'a5', name: 'قدرة السرعة', description: 'تزيد رشاقتك وسرعتك', requiredLevel: 5, category: 'agility', unlocked: false, level: 1, cooldownDays: 7, effect: 'مضاعفة XP الرشاقة' },
-  { id: 'a6', name: 'قدرة الصبر', description: 'تزيد من تحملك', requiredLevel: 7, category: 'spirit', unlocked: false, level: 1, cooldownDays: 7, effect: 'تمديد وقت المهمات' },
-  { id: 'a7', name: 'كشف البوابات', description: 'تكشف البوابات المخفية', requiredLevel: 2, category: 'agility', unlocked: false, level: 1, cooldownDays: 0, effect: 'كشف بوابة إضافية' },
-  { id: 'a8', name: 'قدرة القوة', description: 'تزيد قوتك الجسدية', requiredLevel: 8, category: 'strength', unlocked: false, level: 1, cooldownDays: 7, effect: 'استعادة 50% طاقة' },
+  { id: 'a1', name: 'قدرة الانضباط', description: 'تزيد تركيزك على المهام', requiredLevel: 3, category: 'mind', unlocked: false, level: 0, cooldownDays: 7, effect: 'مضاعفة XP للمهمة القادمة' },
+  { id: 'a2', name: 'قدرة التركيز', description: 'تقلل التشتت الذهني', requiredLevel: 5, category: 'mind', unlocked: false, level: 0, cooldownDays: 7, effect: 'إكمال مهمة تلقائياً' },
+  { id: 'a3', name: 'قدرة التغلب', description: 'تساعدك على هزيمة الزعماء', requiredLevel: 4, category: 'strength', unlocked: false, level: 0, cooldownDays: 7, effect: 'ضرر مضاعف للزعيم' },
+  { id: 'a4', name: 'قدرة ضبط النفس', description: 'تزيد مقاومتك للإغراءات', requiredLevel: 6, category: 'spirit', unlocked: false, level: 0, cooldownDays: 7, effect: 'حماية من خسارة HP' },
+  { id: 'a5', name: 'قدرة السرعة', description: 'تزيد رشاقتك وسرعتك', requiredLevel: 5, category: 'agility', unlocked: false, level: 0, cooldownDays: 7, effect: 'مضاعفة XP الرشاقة' },
+  { id: 'a6', name: 'قدرة الصبر', description: 'تزيد من تحملك', requiredLevel: 7, category: 'spirit', unlocked: false, level: 0, cooldownDays: 7, effect: 'تمديد وقت المهمات' },
+  { id: 'a7', name: 'كشف البوابات', description: 'تكشف البوابات المخفية', requiredLevel: 2, category: 'agility', unlocked: false, level: 0, cooldownDays: 0, effect: 'كشف بوابة إضافية' },
+  { id: 'a8', name: 'قدرة القوة', description: 'تزيد قوتك الجسدية', requiredLevel: 8, category: 'strength', unlocked: false, level: 0, cooldownDays: 7, effect: 'استعادة 50% طاقة' },
 ];
 
 const getInitialAchievements = (): Achievement[] => [
@@ -203,16 +216,8 @@ const getRandomEnergyDensity = (rank: string): string => {
   return (Math.floor(Math.random() * (max - min + 1)) + min).toLocaleString();
 };
 
-const getInitialInventory = (): InventoryItem[] => [
-  { id: 'HP_potion', name: 'زجاجة الدم', description: 'تزيد الدم بنسبة 25%', type: 'health', category: 'Elixir', effect: 25, price: 100, quantity: 0, icon: '❤️' },
-  { id: 'xp_book', name: 'كتاب الخبرة', description: 'يزيد خبرة اللاعب 500 XP', type: 'xp', category: 'Element', effect: 500, price: 250, quantity: 0, icon: '📚' },
-  { id: 'MP_drink', name: 'مشروب الطاقة', description: 'يستعيد 50% من الطاقة', type: 'energy', category: 'Elixir', effect: 50, price: 150, quantity: 0, icon: '⚡' },
-  { id: 'xp_reset', name: 'حجر إعادة التوزيع', description: 'يعيد جميع نقاط XP ويسمح لك بإعادة توزيعها', type: 'reset', category: 'Special', effect: 0, price: 5000, quantity: 0, icon: '🔄' },
-  { id: 'rename_stone', name: 'حجر إعادة التسمية', description: 'يسمح لك بتغيير اسم شخصيتك', type: 'tool', category: 'Special', effect: 0, price: 2000, quantity: 1, icon: '✏️' },
-  { id: 'gate_exit_stone', name: 'حجر الخروج من البوابة', description: 'يسمح بالخروج الآمن من البوابة دون عقوبة', type: 'key', category: 'Special', effect: 0, price: 3000, quantity: 1, icon: '🚪' },
-  { id: 'grand_quest_stone', name: 'حجر المهمة الكبرى', description: 'مطلوب لتفعيل مهمة Grand Quest جديدة', type: 'tool', category: 'Special', effect: 0, price: 5000, quantity: 1, icon: '🔮' },
-  { id: 'central_activation_stone', name: 'حجر التفعيل المركزي', description: 'يفعّل شات النظام للتواصل مع ذكاء النظام', type: 'tool', category: 'Special', effect: 0, price: 10000, quantity: 1, icon: '💬' },
-];
+// New accounts start with an empty inventory. Items are obtained via the Market or rewards.
+const getInitialInventory = (): InventoryItem[] => [];
 
 const getInitialPrayerQuests = (): PrayerQuest[] => [
   { id: 'fajr', name: 'Fajr', arabicName: 'صلاة الفجر', time: '05:00', completed: false, xpReward: 50 },
@@ -402,21 +407,26 @@ export const useGameState = () => {
     const channelName = `game-state-${user.id}-${Date.now()}`;
     const channel = supabase.channel(channelName).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `user_id=eq.${user.id}` }, (payload) => {
           if (payload.new && !isSyncingRef.current) {
-            const newData = payload.new as Record<string, unknown> & {
+            const n = payload.new as Record<string, unknown> & {
               player_name?: string; equipped_title?: string;
               gold?: number; hp?: number; max_hp?: number;
               energy?: number; max_energy?: number; shadow_points?: number;
+              // Canonical profile columns (manual edits in Supabase dashboard)
+              name_player?: string; hp_player?: number; hp_max?: number;
+              mb_player?: number; mp_max?: number; gold_player?: number;
+              level_player?: number; stats_player?: Record<string, number>;
             };
             setGameState(prev => ({
               ...prev,
-              playerName: newData.player_name || prev.playerName,
-              equippedTitle: newData.equipped_title || prev.equippedTitle,
-              gold: newData.gold ?? prev.gold,
-              hp: newData.hp ?? prev.hp,
-              maxHp: newData.max_hp ?? prev.maxHp,
-              energy: newData.energy ?? prev.energy,
-              maxEnergy: newData.max_energy ?? prev.maxEnergy,
-              shadowPoints: newData.shadow_points ?? prev.shadowPoints,
+              playerName: (n.name_player ?? n.player_name) || prev.playerName,
+              equippedTitle: n.equipped_title || prev.equippedTitle,
+              gold: n.gold_player ?? n.gold ?? prev.gold,
+              hp: n.hp_player ?? n.hp ?? prev.hp,
+              maxHp: n.hp_max ?? n.max_hp ?? prev.maxHp,
+              energy: n.mb_player ?? n.energy ?? prev.energy,
+              maxEnergy: n.mp_max ?? n.max_energy ?? prev.maxEnergy,
+              shadowPoints: n.shadow_points ?? prev.shadowPoints,
+              totalLevel: n.level_player ?? prev.totalLevel,
             }));
           }
         }).subscribe();
@@ -836,7 +846,14 @@ export const useGameState = () => {
   const dismissLevelUp = useCallback(() => setLevelUpInfo(null), []);
 
   const startSideQuest = useCallback((questId: string) => {
-    setGameState(prev => ({ ...prev, quests: prev.quests.map(q => (q.id === questId && !q.active && !q.completed) ? { ...q, startedAt: new Date().toISOString(), timeProgress: q.timeProgress || 0, active: true, claimed: false } : q) }));
+    setGameState(prev => {
+      // Mana (MP) gating: block any quest start when MP < 10
+      if ((prev.energy ?? 0) < 10) {
+        try { window.dispatchEvent(new CustomEvent('mp-too-low', { detail: { current: prev.energy, required: 10 } })); } catch {}
+        return prev;
+      }
+      return { ...prev, quests: prev.quests.map(q => (q.id === questId && !q.active && !q.completed) ? { ...q, startedAt: new Date().toISOString(), timeProgress: q.timeProgress || 0, active: true, claimed: false } : q) };
+    });
   }, []);
 
   const updateSideQuestProgress = useCallback((questId: string, progress: number) => {
