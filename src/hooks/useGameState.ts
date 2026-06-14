@@ -299,7 +299,6 @@ export const useGameState = () => {
 
     const loadFromSupabase = async () => {
       try {
-        // تم استبدال سرد الأعمدة بـ '*' لضمان جلب كافة البيانات المحدثة من الجدول دون استثناء
         const { data, error } = await profilesTable().select('*').eq('user_id', user.id).maybeSingle();
         
         if (error) { 
@@ -318,11 +317,24 @@ export const useGameState = () => {
         }
         
         if (data) {
-          // Persisted profile row holds JSONB columns; the loose record cast here is
-          // intentional — strict typing happens further down where we map fields onto GameState.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const savedState = data as any;
           const defaultState = getDefaultState();
+          
+          // دمج واستخراج المهام المنظمة من الـ JSONB المخزن في الحقل الموحد
+          let parsedQuests: Quest[] = [];
+          let parsedGrandQuest: GrandQuest | null = null;
+          
+          if (savedState.quests) {
+            if (typeof savedState.quests === 'object' && !Array.isArray(savedState.quests)) {
+              const mainQ = savedState.quests.mainQuests || [];
+              const sideQ = savedState.quests.sideQuests || [];
+              parsedQuests = [...mainQ, ...sideQ];
+              parsedGrandQuest = savedState.quests.grandQuest || null;
+            } else if (Array.isArray(savedState.quests)) {
+              parsedQuests = savedState.quests;
+            }
+          }
+
           const mergedState = { 
             ...defaultState, 
             isOnboarded: true,
@@ -339,7 +351,8 @@ export const useGameState = () => {
             totalLevel: savedState.level_player ?? savedState.total_level ?? defaultState.totalLevel,
             playerTitle: savedState.player_title || defaultState.playerTitle,
             playerJob: savedState.player_job || defaultState.playerJob,
-            quests: savedState.quests || defaultState.quests,
+            quests: parsedQuests.length > 0 ? parsedQuests : defaultState.quests,
+            grandQuest: parsedGrandQuest || savedState.grand_quest || defaultState.grandQuest,
             currentBoss: savedState.current_boss || defaultState.currentBoss,
             abilities: savedState.abilities || defaultState.abilities,
             achievements: savedState.achievements || defaultState.achievements,
@@ -348,7 +361,6 @@ export const useGameState = () => {
             prayerQuests: savedState.prayer_quests || defaultState.prayerQuests,
             shadowSoldiers: savedState.shadow_soldiers || defaultState.shadowSoldiers,
             gates: savedState.gates || defaultState.gates,
-            grandQuest: savedState.grand_quest || defaultState.grandQuest,
             dailyStats: savedState.daily_stats || defaultState.dailyStats,
             totalQuestsCompleted: savedState.total_quests_completed ?? defaultState.totalQuestsCompleted,
             streakDays: savedState.streak_days ?? defaultState.streakDays,
@@ -399,21 +411,18 @@ export const useGameState = () => {
           if (!mergedState.gates || mergedState.gates.length === 0 || isNewDay) {
             mergedState.gates = getScheduledGates(mergedState.totalLevel || 1);
           }
-          // Seed initial collections for brand-new accounts
           if (!mergedState.abilities || mergedState.abilities.length === 0) {
             mergedState.abilities = getInitialAbilities();
           }
           if (!mergedState.achievements || mergedState.achievements.length === 0) {
             mergedState.achievements = getInitialAchievements();
           }
-          // Ensure stat levels object is populated (DB default is {})
           if (!mergedState.levels || Object.keys(mergedState.levels).length === 0) {
             mergedState.levels = { strength: 1, mind: 1, spirit: 1, agility: 1 };
             mergedState.totalLevel = 1;
           }
           setGameState(mergedState);
         } else {
-          // لا توجد بيانات في السيرفر - إنشاء حالة جديدة
           const defaultState = getDefaultState();
           setGameState({ ...defaultState, isOnboarded: true });
         }
@@ -435,12 +444,25 @@ export const useGameState = () => {
               player_name?: string; equipped_title?: string;
               gold?: number; hp?: number; max_hp?: number;
               energy?: number; max_energy?: number; shadow_points?: number;
-              // Canonical profile columns (manual edits in Supabase dashboard)
               name_player?: string; hp_player?: number; hp_max?: number;
               mb_player?: number; mp_max?: number; gold_player?: number;
               level_player?: number; stats_player?: Record<string, number>;
               punishment?: any;
+              quests?: any;
             };
+
+            let parsedQuests: Quest[] = prev => prev.quests;
+            let parsedGrandQuest: GrandQuest | null = prev => prev.grandQuest;
+
+            if (n.quests) {
+              if (typeof n.quests === 'object' && !Array.isArray(n.quests)) {
+                parsedQuests = [...(n.quests.mainQuests || []), ...(n.quests.sideQuests || [])];
+                parsedGrandQuest = n.quests.grandQuest || null;
+              } else if (Array.isArray(n.quests)) {
+                parsedQuests = n.quests;
+              }
+            }
+
             setGameState(prev => ({
               ...prev,
               playerName: (n.name_player ?? n.player_name) || prev.playerName,
@@ -453,6 +475,8 @@ export const useGameState = () => {
               shadowPoints: n.shadow_points ?? prev.shadowPoints,
               totalLevel: n.level_player ?? prev.totalLevel,
               punishment: n.punishment || prev.punishment,
+              quests: typeof parsedQuests === 'function' ? prev.quests : parsedQuests,
+              grandQuest: typeof parsedGrandQuest === 'function' ? prev.grandQuest : parsedGrandQuest
             }));
           }
         }).subscribe();
@@ -475,7 +499,6 @@ export const useGameState = () => {
   }, []);
 
   useEffect(() => {
-    // حفظ في localStorage بمفتاح خاص بالمستخدم
     const storageKey = getStorageKey(user?.id);
     localStorage.setItem(storageKey, JSON.stringify(gameState));
     
@@ -485,6 +508,14 @@ export const useGameState = () => {
       isSyncingRef.current = true;
       try {
         const { data: existing } = await profilesTable().select('id').eq('user_id', user.id).maybeSingle();
+        
+        // هيكلة تخزين المهام ديناميكياً داخل كائن الـ JSONB الموحد
+        const structuredQuestsPayload = {
+          mainQuests: gameState.quests.filter(q => q.isMainQuest),
+          sideQuests: gameState.quests.filter(q => !q.isMainQuest),
+          grandQuest: gameState.grandQuest
+        };
+
         const updateData = { 
           player_name: gameState.playerName, 
           equipped_title: gameState.equippedTitle || null, 
@@ -499,7 +530,8 @@ export const useGameState = () => {
           total_level: gameState.totalLevel,
           player_title: gameState.playerTitle,
           player_job: gameState.playerJob,
-          quests: gameState.quests,
+          quests: structuredQuestsPayload, // إرسال المهام الكلية مقسمة بداخل الـ JSONB
+          grand_quest: gameState.grandQuest,
           current_boss: gameState.currentBoss,
           abilities: gameState.abilities,
           achievements: gameState.achievements,
@@ -508,7 +540,6 @@ export const useGameState = () => {
           prayer_quests: gameState.prayerQuests,
           shadow_soldiers: gameState.shadowSoldiers,
           gates: gameState.gates,
-          grand_quest: gameState.grandQuest,
           daily_stats: gameState.dailyStats,
           total_quests_completed: gameState.totalQuestsCompleted,
           streak_days: gameState.streakDays,
@@ -531,7 +562,6 @@ export const useGameState = () => {
   const getXpRequiredForLevel = (level: number): number => {
     if (level >= MAX_LEVEL) return 999999999;
     const baseXP = 100;
-    // زيادة الصعوبة بنسبة 22% تراكمياً لكل مستوى
     return Math.floor(baseXP * Math.pow(1.22, level - 1));
   };
 
@@ -681,7 +711,6 @@ export const useGameState = () => {
     });
   }, []);
 
-  // SETVOID canonical market catalog. i18n names/descriptions resolved in UI.
   const MARKET_ITEMS: InventoryItem[] = [
     { id: 'hp_elixir',      name: 'HP Elixir',         description: 'Restores 50% HP',  type: 'health', category: 'consumable',       effect: 50, price: 300,  quantity: 0, icon: '🧪' },
     { id: 'mp_elixir',      name: 'MP Elixir',         description: 'Restores 50% MP',  type: 'energy', category: 'consumable',       effect: 50, price: 300,  quantity: 0, icon: '⚡' },
@@ -690,7 +719,6 @@ export const useGameState = () => {
     { id: 'shadow_dagger',  name: 'Dagger of Shadows', description: 'Weapon (+92 HP, +231 DMG)', type: 'tool', category: 'weapon',    effect: 0,  price: 11000,quantity: 0, icon: '🗡️' },
     { id: 'cutting_stones', name: 'Cutting Stones',    description: 'Merge 5 to forge a Mana Stone', type: 'tool', category: 'special_material', effect: 0, price: 7000, quantity: 0, icon: '💎' },
     { id: 'mana_analyst',   name: 'Mana Analyst',      description: '2 uses utility',   type: 'tool',   category: 'utility',          effect: 0,  price: 1000, quantity: 0, icon: '📊' },
-    // Mana Stone — not purchasable, only forged from 5 Cutting Stones
     { id: 'mana_stone',     name: 'Mana Stone',        description: 'Forged from 5 Cutting Stones', type: 'tool', category: 'stone',  effect: 0,  price: 0,    quantity: 0, icon: '🔮' },
   ];
 
@@ -762,7 +790,6 @@ export const useGameState = () => {
         updates.levels = newLevels;
         updates.totalLevel = getTotalLevel(newLevels);
       } else if (item.type === 'title' || item.type === 'tool' || item.type === 'key' || item.type === 'reset') {
-        // عناصر لا تُستهلك بالطريقة العادية
         return prev;
       }
 
@@ -771,21 +798,16 @@ export const useGameState = () => {
     });
   }, [calculateLevel, getTotalLevel]);
 
-  // إعادة توزيع نقاط XP - تجمع كل النقاط وتعيد توزيعها
   const resetAndReallocateXP = useCallback((newAllocation: Record<StatType, number>) => {
     setGameState(prev => {
-      // إيجاد عنصر إعادة التوزيع
       const resetItem = prev.inventory.find(i => i.id === 'xp_reset');
       if (!resetItem || resetItem.quantity <= 0) return prev;
 
-      // جمع كل نقاط XP الحالية
       const totalXP = prev.stats.strength + prev.stats.mind + prev.stats.spirit + prev.stats.agility;
       
-      // التأكد من أن التوزيع الجديد يساوي المجموع الكلي
       const allocatedTotal = Object.values(newAllocation).reduce((sum, val) => sum + val, 0);
       if (allocatedTotal !== totalXP) return prev;
 
-      // تحديث الإحصائيات
       const newStats = { ...newAllocation };
       const newLevels = {
         strength: calculateLevel(newStats.strength),
@@ -794,7 +816,6 @@ export const useGameState = () => {
         agility: calculateLevel(newStats.agility),
       };
 
-      // تقليل كمية العنصر
       const newInventory = prev.inventory.map(i => 
         i.id === 'xp_reset' ? { ...i, quantity: i.quantity - 1 } : i
       );
@@ -826,7 +847,6 @@ export const useGameState = () => {
     });
   }, []);
 
-  // Mission Failure penalty (HP deduction by difficulty)
   const QUEST_FAIL_HP: Record<string, number> = {
     easy: 10,
     medium: 20,
@@ -839,7 +859,6 @@ export const useGameState = () => {
       const quest = prev.quests.find(q => q.id === questId);
       if (!quest || quest.completed) return prev;
       const dmg = QUEST_FAIL_HP[quest.difficulty] ?? 15;
-      // Mark quest as failed: reset startedAt, increment missedQuestsCount, deduct HP
       const newQuests = prev.quests.map(q =>
         q.id === questId ? { ...q, startedAt: undefined, timerDuration: undefined, active: false } : q
       );
@@ -926,16 +945,19 @@ export const useGameState = () => {
 
   const startSideQuest = useCallback((questId: string) => {
     setGameState(prev => {
-      // Mana (MP) gating: block any quest start when MP < 10
       if ((prev.energy ?? 0) < 10) {
         try { window.dispatchEvent(new CustomEvent('mp-too-low', { detail: { current: prev.energy, required: 10 } })); } catch {}
         return prev;
       }
       const updatedQuests = prev.quests.map(q => (q.id === questId && !q.active && !q.completed) ? { ...q, startedAt: new Date().toISOString(), timeProgress: q.timeProgress || 0, active: true, claimed: false } : q);
       
-      // مزامنة فورية ومباشرة لتقدم المهمة الجديد إلى Supabase لمنع الضياع عند خروج اللاعب
       if (user?.id) {
-        profilesTable().update({ quests: updatedQuests }).eq('user_id', user.id).then();
+        const structuredQuestsPayload = {
+          mainQuests: updatedQuests.filter(q => q.isMainQuest),
+          sideQuests: updatedQuests.filter(q => !q.isMainQuest),
+          grandQuest: prev.grandQuest
+        };
+        profilesTable().update({ quests: structuredQuestsPayload }).eq('user_id', user.id).then();
       }
       
       return { ...prev, quests: updatedQuests };
@@ -952,9 +974,13 @@ export const useGameState = () => {
         return q;
       });
 
-      // مزامنة فورية ومباشرة للتقدم المستمر العداد إلى Supabase
       if (user?.id) {
-        profilesTable().update({ quests: updatedQuests }).eq('user_id', user.id).then();
+        const structuredQuestsPayload = {
+          mainQuests: updatedQuests.filter(q => q.isMainQuest),
+          sideQuests: updatedQuests.filter(q => !q.isMainQuest),
+          grandQuest: prev.grandQuest
+        };
+        profilesTable().update({ quests: structuredQuestsPayload }).eq('user_id', user.id).then();
       }
 
       return { ...prev, quests: updatedQuests };
@@ -980,7 +1006,6 @@ export const useGameState = () => {
     setGameState(prev => ({ ...prev, quests: prev.quests.map(q => q.id === questId ? { ...q, startedAt: undefined, timeProgress: 0 } : q) }));
   }, []);
 
-  // إكمال البوابة وجمع الغنائم
   const completeGate = useCallback((gateId: string, loot: { id: string; type: string; quantity: number }[]) => {
     setGameState(prev => {
       let newGold = prev.gold;
@@ -988,12 +1013,10 @@ export const useGameState = () => {
       let newStats = { ...prev.stats };
       const newInventory = [...prev.inventory];
 
-      // معالجة كل عنصر من الغنائم
       loot.forEach(item => {
         if (item.type === 'gold') {
           newGold += item.quantity;
         } else if (item.type === 'xp') {
-          // توزيع XP بالتساوي على الإحصائيات
           const perStat = Math.floor(item.quantity / 4);
           newStats.strength += perStat;
           newStats.mind += perStat;
@@ -1002,12 +1025,10 @@ export const useGameState = () => {
         } else if (item.id === 'shadow_points') {
           newShadowPoints += item.quantity;
         } else if (item.type === 'item' || item.type === 'key') {
-          // إضافة العنصر للمخزون
           const existingItem = newInventory.find(i => i.id === item.id);
           if (existingItem) {
             existingItem.quantity += item.quantity;
           } else {
-            // إضافة عنصر جديد
             newInventory.push({
               id: item.id,
               name: item.id.replace(/_/g, ' '),
@@ -1022,7 +1043,6 @@ export const useGameState = () => {
         }
       });
 
-      // تحديث مستويات الإحصائيات
       const newLevels = {
         strength: Math.min(calculateLevel(newStats.strength), MAX_LEVEL),
         mind: Math.min(calculateLevel(newStats.mind), MAX_LEVEL),
@@ -1031,7 +1051,6 @@ export const useGameState = () => {
       };
       const newTotalLevel = getTotalLevel(newLevels);
 
-      // تحديث البوابة كمكتملة
       const newGates = prev.gates.map(g => 
         g.id === gateId ? { ...g, completed: true } : g
       );
@@ -1067,7 +1086,6 @@ export const useGameState = () => {
     return success;
   }, []);
 
-  // Merge 5 Cutting Stones → 1 Mana Stone
   const mergeCuttingStones = useCallback((): boolean => {
     const NEED = 5;
     let ok = false;
@@ -1087,8 +1105,6 @@ export const useGameState = () => {
     return ok;
   }, []);
 
-  // Consume 1 Mana Stone (called after the user picks an action in the modal).
-  // Action handling itself (navigation, opening chat, etc.) is performed by the UI.
   const consumeManaStone = useCallback((): boolean => {
     let ok = false;
     setGameState(prev => {
@@ -1105,7 +1121,6 @@ export const useGameState = () => {
     return ok;
   }, []);
 
-  // Grant gold + items from gate/dungeon loot in one atomic update.
   const claimGateLoot = useCallback(
     (entries: Array<{ id: string; quantity: number; type: 'gold' | 'item' }>) => {
       setGameState(prev => {
