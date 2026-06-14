@@ -299,7 +299,8 @@ export const useGameState = () => {
 
     const loadFromSupabase = async () => {
       try {
-        const { data, error } = await profilesTable().select('quests, current_boss, abilities, achievements, inventory, equipment, prayer_quests, shadow_soldiers, gates, grand_quest, claimed_rewards, daily_stats, total_quests_completed, streak_days, last_active_date, punishment, punishment_end_time, missed_quests_count, selected_reciter, sound_enabled, is_onboarded, last_boss_attack_time, player_name, gold, hp, max_hp, energy, max_energy, shadow_points, equipped_title, stats, levels, total_level, player_title, player_job').eq('user_id', user.id).maybeSingle();
+        // تم استبدال سرد الأعمدة بـ '*' لضمان جلب كافة البيانات المحدثة من الجدول دون استثناء
+        const { data, error } = await profilesTable().select('*').eq('user_id', user.id).maybeSingle();
         
         if (error) { 
           isInitializedRef.current = true; 
@@ -325,17 +326,17 @@ export const useGameState = () => {
           const mergedState = { 
             ...defaultState, 
             isOnboarded: true,
-            playerName: savedState.player_name || defaultState.playerName,
-            gold: savedState.gold ?? defaultState.gold,
-            hp: savedState.hp ?? defaultState.hp,
-            maxHp: savedState.max_hp ?? defaultState.maxHp,
-            energy: savedState.energy ?? defaultState.energy,
-            maxEnergy: savedState.max_energy ?? defaultState.maxEnergy,
+            playerName: savedState.name_player || savedState.player_name || defaultState.playerName,
+            gold: savedState.gold_player ?? savedState.gold ?? defaultState.gold,
+            hp: savedState.hp_player ?? savedState.hp ?? defaultState.hp,
+            maxHp: savedState.hp_max ?? savedState.max_hp ?? defaultState.maxHp,
+            energy: savedState.mb_player ?? savedState.energy ?? defaultState.energy,
+            maxEnergy: savedState.mp_max ?? savedState.max_energy ?? defaultState.maxEnergy,
             shadowPoints: savedState.shadow_points ?? defaultState.shadowPoints,
             equippedTitle: savedState.equipped_title || defaultState.equippedTitle,
-            stats: savedState.stats || defaultState.stats,
+            stats: savedState.stats_player || savedState.stats || defaultState.stats,
             levels: savedState.levels || defaultState.levels,
-            totalLevel: savedState.total_level || defaultState.totalLevel,
+            totalLevel: savedState.level_player ?? savedState.total_level ?? defaultState.totalLevel,
             playerTitle: savedState.player_title || defaultState.playerTitle,
             playerJob: savedState.player_job || defaultState.playerJob,
             quests: savedState.quests || defaultState.quests,
@@ -514,7 +515,7 @@ export const useGameState = () => {
           last_active_date: gameState.lastActiveDate,
           punishment: gameState.punishment,
           punishment_end_time: gameState.punishmentEndTime,
-          missed_quests_count: gameState.missedQuestsCount,
+          missedQuestsCount: gameState.missedQuestsCount,
           selected_reciter: gameState.selectedReciter,
           sound_enabled: gameState.soundEnabled,
           is_onboarded: gameState.isOnboarded,
