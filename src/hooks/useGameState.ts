@@ -498,6 +498,51 @@ export const useGameState = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // تأثير جديد للخصم الدوري والتلقائي للصحة أثناء العقاب النشط كل ساعة
+  useEffect(() => {
+    if (!gameState.punishment?.active || !gameState.punishment?.endTime) return;
+
+    const checkPunishmentDamage = () => {
+      const endTime = new Date(gameState.punishment.endTime).getTime();
+      const now = new Date().getTime();
+      const totalDuration = 4 * 60 * 60 * 1000; // 4 ساعات بالملي ثانية
+      const startTime = endTime - totalDuration;
+
+      if (now >= endTime) return;
+
+      const msElapsed = now - startTime;
+      if (msElapsed <= 0) return;
+
+      const hoursElapsed = Math.floor(msElapsed / (1000 * 60 * 60));
+      // تحديد الضرر الإجمالي المتوقع بناءً على عدد الساعات التي مرت (5 HP لكل ساعة، بحد أقصى 20)
+      const expectedDamage = Math.min(20, hoursElapsed * 5);
+
+      if (expectedDamage > 0) {
+        setGameState(prev => {
+          // حساب الـ HP الأساسي الذي كان من المفترض أن يكون لدى اللاعب بعد العقاب مباشرة
+          const baseHpInPenalty = prev.punishment.maxHpInPenalty - 30; 
+          const targetHp = Math.max(0, baseHpInPenalty - expectedDamage);
+
+          if (prev.hp > targetHp) {
+            return {
+              ...prev,
+              hp: targetHp,
+              punishment: {
+                ...prev.punishment,
+                playerHpInPenalty: targetHp
+              }
+            };
+          }
+          return prev;
+        });
+      }
+    };
+
+    checkPunishmentDamage();
+    const interval = setInterval(checkPunishmentDamage, 60000); // التحقق كل دقيقة لضمان التحديث اللحظي
+    return () => clearInterval(interval);
+  }, [gameState.punishment?.active, gameState.punishment?.endTime]);
+
   useEffect(() => {
     const storageKey = getStorageKey(user?.id);
     localStorage.setItem(storageKey, JSON.stringify(gameState));
@@ -589,7 +634,7 @@ export const useGameState = () => {
       level++;
     }
     return 100;
-  };
+  }
 
   const getTotalLevel = useCallback((levels: typeof gameState.levels): number => {
     const average = (levels.strength + levels.mind + levels.spirit + levels.agility) / 4;
