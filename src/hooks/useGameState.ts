@@ -335,6 +335,9 @@ export const useGameState = () => {
             }
           }
 
+          // إصلاح جلب حقل الصلوات للتأكد من المحافظة على حالتها بعد التحديث المباشر
+          const fetchedPrayerQuests = savedState.prayer_quests || savedState.prayerQuests || defaultState.prayerQuests;
+
           const mergedState = { 
             ...defaultState, 
             isOnboarded: true,
@@ -358,10 +361,10 @@ export const useGameState = () => {
             achievements: savedState.achievements || defaultState.achievements,
             inventory: savedState.inventory || defaultState.inventory,
             equipment: savedState.equipment || defaultState.equipment,
-            prayerQuests: savedState.prayer_quests || defaultState.prayerQuests,
+            prayerQuests: Array.isArray(fetchedPrayerQuests) && fetchedPrayerQuests.length > 0 ? fetchedPrayerQuests : defaultState.prayerQuests,
             shadowSoldiers: savedState.shadow_soldiers || defaultState.shadowSoldiers,
             gates: savedState.gates || defaultState.gates,
-            dailyStats: savedState.daily_stats || defaultState.dailyStats,
+            daily_stats: savedState.daily_stats || defaultState.dailyStats,
             totalQuestsCompleted: savedState.total_quests_completed ?? defaultState.totalQuestsCompleted,
             streakDays: savedState.streak_days ?? defaultState.streakDays,
             lastActiveDate: savedState.last_active_date || defaultState.lastActiveDate,
@@ -403,11 +406,14 @@ export const useGameState = () => {
             mergedState.quests = [...getRotatingQuests(), ...getSideQuests()];
             mergedState.lastActiveDate = today;
           }
+          
+          // تعديل شرط التهيئة لضمان عدم تصفير الصلوات عند تحديث الصفحة في نفس اليوم
           if (!mergedState.prayerQuests || mergedState.prayerQuests.length === 0) {
             mergedState.prayerQuests = getInitialPrayerQuests();
           } else if (isNewDay) {
             mergedState.prayerQuests = mergedState.prayerQuests.map((p: PrayerQuest) => ({ ...p, completed: false }));
           }
+          
           if (!mergedState.gates || mergedState.gates.length === 0 || isNewDay) {
             mergedState.gates = getScheduledGates(mergedState.totalLevel || 1);
           }
@@ -449,6 +455,7 @@ export const useGameState = () => {
               level_player?: number; stats_player?: Record<string, number>;
               punishment?: any;
               quests?: any;
+              prayer_quests?: any;
             };
 
             let parsedQuests: Quest[] = prev => prev.quests;
@@ -476,7 +483,8 @@ export const useGameState = () => {
               totalLevel: n.level_player ?? prev.totalLevel,
               punishment: n.punishment || prev.punishment,
               quests: typeof parsedQuests === 'function' ? prev.quests : parsedQuests,
-              grandQuest: typeof parsedGrandQuest === 'function' ? prev.grandQuest : parsedGrandQuest
+              grandQuest: typeof parsedGrandQuest === 'function' ? prev.grandQuest : parsedGrandQuest,
+              prayerQuests: n.prayer_quests || prev.prayerQuests
             }));
           }
         }).subscribe();
@@ -1069,7 +1077,7 @@ export const useGameState = () => {
           newStats.agility += perStat + (item.quantity % 4);
         } else if (item.id === 'shadow_points') {
           newShadowPoints += item.quantity;
-        } else if (item.type === 'item' || item.type === 'key') {
+        } else if (item.type === 'item' || item.type === 'key' || item.type === 'key') {
           const existingItem = newInventory.find(i => i.id === item.id);
           if (existingItem) {
             existingItem.quantity += item.quantity;
