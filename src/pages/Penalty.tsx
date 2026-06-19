@@ -22,11 +22,11 @@ const Penalty = () => {
 
   useEffect(() => {
     if (started.current) return;
-    if (!active && !endAt) {
-      started.current = true;
-      start(4);
-    }
-  }, [active, endAt, start]);
+    if (active === true || endAt) return;
+
+    started.current = true;
+    start(4);
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -63,6 +63,7 @@ const Penalty = () => {
             <span className="text-[10px] tracking-[0.3em] text-red-400">PENALTY ZONE</span>
             <span className="text-[10px] tracking-[0.2em] text-red-300">{mm}:{ss}</span>
           </div>
+
           <div className="grid grid-cols-4 gap-1 mb-2">
             {Array.from({ length: TOTAL_ROUNDS }).map((_, i) => (
               <div
@@ -74,8 +75,10 @@ const Penalty = () => {
               />
             ))}
           </div>
+
           <div className="text-xs font-bold text-red-300">{task.title}</div>
           <div className="text-[11px] text-white/70 mt-1">{task.desc}</div>
+
           <div className="text-[10px] text-white/40 mt-2">
             Round {currentRound + 1} / {TOTAL_ROUNDS} — Fail to complete and the monster strikes.
           </div>
